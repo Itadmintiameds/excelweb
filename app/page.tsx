@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import axios from "axios";
 import Header from "../components/Header";
 import SummaryCards from "../components/SummaryCards";
 import SearchBar from "../components/SearchBar";
@@ -28,8 +29,8 @@ export default function Home() {
     const fetchReports = async () => {
 
       try {
-        const response = await fetch("/api/excel-data");
-        const result = await response.json();
+        const response = await axios.get("/api/excel-data");
+        const result = response.data;
 
         const allReports = result.data || [];
         const names = result.sheetNames || [];

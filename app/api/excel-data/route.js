@@ -21,10 +21,12 @@ export async function GET() {
   try {
     const scriptResult = await fetchAllSheetData();
     const allTabNames = scriptResult.tabs || [];
-    const dateTabNames = allTabNames.filter((name) => parseDMY(name) !== 0);
+    // Do not filter out tabs if their name isn't a date (e.g. "Sheet1 (1)")
+    const dateTabNames = allTabNames;
     const tabsData = scriptResult.data || {};
 
     const allEmployees = [];
+    const effectiveSheetNamesSet = new Set();
 
     for (const sheetName of dateTabNames) {
       const data = tabsData[sheetName] || [];
@@ -48,8 +50,19 @@ export async function GET() {
         else row["Resource Attendance"] = lastAttendance;
       });
 
-      const sheetDateTime = parseDMY(sheetName);
-      const sheetFormattedDate = formatSheetLabel(sheetName);
+      let sheetDateTime = parseDMY(sheetName);
+      let sheetFormattedDate = formatSheetLabel(sheetName);
+      let effectiveSheetName = sheetName;
+
+      // Fallback: if sheet name isn't a date, use the date from the rows
+      if (sheetDateTime === 0 && lastDate) {
+        effectiveSheetName = formatSheetLabel(lastDate);
+        sheetDateTime = parseDMY(lastDate);
+        sheetFormattedDate = effectiveSheetName;
+      }
+      
+      effectiveSheetNamesSet.add(effectiveSheetName);
+
       const isWeekend =
         sheetDateTime !== 0 && [0, 6].includes(new Date(sheetDateTime).getDay());
 
@@ -101,7 +114,7 @@ export async function GET() {
       resourceGroups.forEach((group) => {
         allEmployees.push({
           excelOrder: group.excelOrder,
-          sheetName,
+          sheetName: effectiveSheetName,
           id: group.id,
           date: sheetFormattedDate,
           resource: group.resource,
@@ -120,7 +133,7 @@ export async function GET() {
       return a.excelOrder - b.excelOrder;
     });
 
-    const sheetNames = dateTabNamesSorted(dateTabNames);
+    const sheetNames = dateTabNamesSorted(Array.from(effectiveSheetNamesSet));
     const latestSheet = sheetNames[sheetNames.length - 1];
 
     return Response.json({
