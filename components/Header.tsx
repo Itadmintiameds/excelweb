@@ -1,3 +1,5 @@
+import SendEmailButton from "./SendEmailButton";
+
 export default function Header() {
   const today = new Date().toLocaleDateString("en-IN", {
     day: "numeric",
@@ -33,7 +35,9 @@ export default function Header() {
               {today}
             </p>
           </div>
-          
+
+          <SendEmailButton />
+
         </div>
 
       </div>
