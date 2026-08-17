@@ -19,7 +19,7 @@ export default function Header() {
           </h1>
 
           <p className="text-gray-500 mt-1">
-            Daily Report Dashboard - test
+            Daily Report Dashboard
           </p>
         </div>
 
