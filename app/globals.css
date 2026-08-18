@@ -1,6 +1,11 @@
 @import "tailwindcss";
 
 :root {
+  /* The dashboard is a light-only design — every surface (cards, table rows,
+     page background) is hard-coded light. Pinning color-scheme stops browsers
+     from auto-darkening native controls like the date picker and selects. */
+  color-scheme: light;
+
   --background: #ffffff;
   --foreground: #171717;
 }
@@ -12,12 +17,10 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* No prefers-color-scheme: dark override here on purpose. The create-next-app
+   default flipped --foreground to #ededed on dark-mode devices, which made all
+   text that doesn't set its own color (table cells, filter selects) render
+   near-white on the hard-coded white surfaces. */
 
 body {
   background: var(--background);
