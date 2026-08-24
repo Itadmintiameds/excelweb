@@ -107,6 +107,33 @@ export default function ReportTable({
     setRecordsOnPage(currentRecords.length);
   }, [currentRecords, setRecordsOnPage]);
 
+  // Consecutive rows for the same resource on the same date are the task rows of
+  // one merged block in the sheet. Re-merge their Sl.No / Date / Resource /
+  // Project cells with rowSpan so the name is not repeated for every task. Only
+  // adjacent rows merge, so sorting by another column safely un-merges them.
+  const rowMeta = currentRecords.map((report, index) => {
+    const previous = currentRecords[index - 1];
+    const startsBlock =
+      !previous ||
+      previous.resource !== report.resource ||
+      previous.sheetName !== report.sheetName;
+    return { startsBlock, span: 1, serial: 0, block: 0 };
+  });
+
+  let blockCount = 0;
+  rowMeta.forEach((meta, index) => {
+    if (meta.startsBlock) {
+      blockCount += 1;
+      meta.serial = blockCount;
+      let span = 1;
+      while (index + span < rowMeta.length && !rowMeta[index + span].startsBlock) {
+        span += 1;
+      }
+      meta.span = span;
+    }
+    meta.block = blockCount;
+  });
+
   const handleSort = (column: string) => {
     if (sortBy === column) {
       setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -168,12 +195,26 @@ export default function ReportTable({
               currentRecords.map((report, index) => (
                 <tr
                   key={`${report.sheetName}-${report.resource}-${index}`}
-                  className={`transition hover:bg-violet-50 ${index % 2 === 0 ? "bg-white" : "bg-gray-50"}`}
+                  className={`transition hover:bg-violet-50 ${
+                    rowMeta[index].block % 2 === 1 ? "bg-white" : "bg-gray-50"
+                  }`}
                 >
-                  <td className="border p-3 text-center">{index + 1}</td>
-                  <td className="border p-3 text-center">{report.date}</td>
-                  <td className="border p-3">{report.resource}</td>
-                  <td className="border p-3">{report.project}</td>
+                  {rowMeta[index].startsBlock && (
+                    <>
+                      <td rowSpan={rowMeta[index].span} className="border p-3 text-center align-middle">
+                        {rowMeta[index].serial}
+                      </td>
+                      <td rowSpan={rowMeta[index].span} className="border p-3 text-center align-middle">
+                        {report.date}
+                      </td>
+                      <td rowSpan={rowMeta[index].span} className="border p-3 text-center align-middle">
+                        {report.resource}
+                      </td>
+                      <td rowSpan={rowMeta[index].span} className="border p-3 text-center align-middle">
+                        {report.project}
+                      </td>
+                    </>
+                  )}
                   <td className="border p-3 whitespace-pre-line">{report.task}</td>
                   <td className="border p-3 text-center">
                     <StatusBadge status={report.status} />

@@ -1,30 +1,27 @@
 "use client";
 
 import SummaryCard from "./SummaryCard";
-import { formatSheetLabel, isoToDMY } from "@/lib/dateUtils";
 
 type SummaryCardsProps = {
   reports: any[];
   selectedCard: string;
   setSelectedCard: (value: string) => void;
 
-  dateFilter: string;
+  currentSheetName?: string;
 };
 
 export default function SummaryCards({
   reports,
   selectedCard,
   setSelectedCard,
-  dateFilter,
+  currentSheetName,
 }: SummaryCardsProps) {
 
-  // Show reports for selected date only
-  const filteredReports =
-    dateFilter === ""
-      ? reports
-      : reports.filter(
-          (report) => formatSheetLabel(report.sheetName) === isoToDMY(dateFilter)
-        );
+  // Count only the sheet on screen — one page is one day — so the cards match
+  // the table below them. On load that is the latest sheet.
+  const filteredReports = currentSheetName
+    ? reports.filter((report) => report.sheetName === currentSheetName)
+    : reports;
 
   const cards = [
     {

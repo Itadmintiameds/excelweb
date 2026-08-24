@@ -41,7 +41,6 @@ export default function FilterBar({
           <option value="All">All Status</option>
           <option value="Completed">Completed</option>
           <option value="In Progress">In Progress</option>
-          <option value="Completed / In Progress">Completed / In Progress</option>
         </select>
 
         {/* Attendance */}

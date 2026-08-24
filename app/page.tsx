@@ -37,6 +37,13 @@ export default function Home() {
 
         setReports(allReports);
         setSheetNames(names);
+
+        // sheetNames is sorted oldest -> newest, and each page is one sheet, so
+        // the last page is the most recent report (today's, once it exists).
+        // Without this the dashboard opens on the oldest sheet.
+        if (names.length > 0) {
+          setCurrentPage(names.length);
+        }
       }
 
       catch (error) {
@@ -76,8 +83,9 @@ export default function Home() {
   };
 
   const totalPages = Math.max(1, sheetNames.length);
-  const currentDateLabel = sheetNames[currentPage - 1]
-    ? formatSheetLabel(sheetNames[currentPage - 1])
+  const currentSheetName = sheetNames[currentPage - 1];
+  const currentDateLabel = currentSheetName
+    ? formatSheetLabel(currentSheetName)
     : undefined;
 
   const dateOptions = sheetNames.map((name, i) => ({
@@ -94,7 +102,7 @@ export default function Home() {
         reports={reports}
         selectedCard={selectedCard}
         setSelectedCard={setSelectedCard}
-        dateFilter={dateFilter}
+        currentSheetName={currentSheetName}
         />
 
         <SearchBar

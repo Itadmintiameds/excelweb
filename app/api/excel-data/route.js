@@ -1,16 +1,10 @@
 import { fetchAllSheetData } from "@/lib/googleSheets";
 import { parseDMY, formatSheetLabel } from "@/lib/dateUtils";
 
-function combineTasks(tasks) {
-  const clean = tasks.filter((t) => t && t.trim() !== "");
-  if (clean.length === 0) return "";
-  if (clean.length === 1) return clean[0];
-  return clean
-    .map((t, i) => {
-      const stripped = t.replace(/^\s*\d+[\.\)]\s*/, "");
-      return `${i + 1}. ${stripped}`;
-    })
-    .join("\n");
+// Task cells often carry their own numbering ("1)Implemented print ..."). Each
+// task is its own table row now, so that prefix is redundant.
+function stripTaskNumber(task) {
+  return task.replace(/^\s*\d+[\.\)]\s*/, "");
 }
 
 function dateTabNamesSorted(names) {
@@ -31,9 +25,17 @@ export async function GET() {
     for (const sheetName of dateTabNames) {
       const data = tabsData[sheetName] || [];
 
+      // A row that is entirely empty in the sheet is spacing, not data. This
+      // has to be decided before the forward-fill below, which would otherwise
+      // inherit values from the row above and turn it into a phantom record.
+      const isBlankRow = data.map((row) =>
+        Object.values(row).every((value) => String(value ?? "").trim() === "")
+      );
+
       let lastId = "";
       let lastDate = "";
       let lastResource = "";
+      let lastProject = "";
       let lastAttendance = "";
 
       data.forEach((row) => {
@@ -45,6 +47,11 @@ export async function GET() {
 
         if (row["Resource Name"] !== "") lastResource = row["Resource Name"];
         else row["Resource Name"] = lastResource;
+
+        // Project Name is a merged cell spanning a resource's task rows, so it
+        // has to be filled down too or every task after the first loses it.
+        if (row["Project Name"] !== "") lastProject = row["Project Name"];
+        else row["Project Name"] = lastProject;
 
         if (row["Resource Attendance"] !== "") lastAttendance = row["Resource Attendance"];
         else row["Resource Attendance"] = lastAttendance;
@@ -60,22 +67,14 @@ export async function GET() {
         sheetDateTime = parseDMY(lastDate);
         sheetFormattedDate = effectiveSheetName;
       }
-      
+
       effectiveSheetNamesSet.add(effectiveSheetName);
 
       const isWeekend =
         sheetDateTime !== 0 && [0, 6].includes(new Date(sheetDateTime).getDay());
 
-      const resourceGroups = new Map();
-
       data.forEach((row, index) => {
-        if (
-          row["Sl. No."] === "" &&
-          row["Resource Name"] === "" &&
-          row["Task Details"] === ""
-        ) {
-          return;
-        }
+        if (isBlankRow[index]) return;
 
         let status = String(row["Status"] || "").trim();
         if (status.toLowerCase().includes("completed")) {
@@ -91,37 +90,25 @@ export async function GET() {
 
         const resource = String(row["Resource Name"] || "").trim();
         const project = String(row["Project Name"] || "").trim();
-        const task = String(row["Task Details"] || "").trim();
+        const task = stripTaskNumber(String(row["Task Details"] || "").trim());
 
-        if (!resourceGroups.has(resource)) {
-          resourceGroups.set(resource, {
-            excelOrder: index,
-            id: Number(row["Sl. No."]) || 0,
-            resource,
-            projects: new Set(),
-            tasks: [],
-            statuses: new Set(),
-            attendance,
-          });
-        }
+        // Sheets are often pre-filled with names and Sl. No. before anyone has
+        // logged work, and some rows carry only a date. Neither is a report, so
+        // require at least one of task / status / attendance to be present.
+        if (!task && !status && !attendance) return;
 
-        const group = resourceGroups.get(resource);
-        if (project) group.projects.add(project);
-        if (task) group.tasks.push(task);
-        if (status) group.statuses.add(status);
-      });
-
-      resourceGroups.forEach((group) => {
+        // One record per sheet row, so every task keeps its own status instead
+        // of being collapsed into a combined "Completed / In Progress" badge.
         allEmployees.push({
-          excelOrder: group.excelOrder,
+          excelOrder: index,
           sheetName: effectiveSheetName,
-          id: group.id,
+          id: Number(row["Sl. No."]) || 0,
           date: sheetFormattedDate,
-          resource: group.resource,
-          project: [...group.projects].join(", "),
-          task: combineTasks(group.tasks),
-          status: [...group.statuses].join(" / "),
-          attendance: group.attendance,
+          resource,
+          project,
+          task,
+          status,
+          attendance,
         });
       });
     }
