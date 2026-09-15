@@ -1,4 +1,5 @@
 import { sendDailyReportEmail } from "@/lib/sendDailyEmail";
+import { nonWorkingDayReason } from "@/lib/holidays";
 
 // Sending over SMTP can take a while; the Vercel default is 10s.
 // 60s is the ceiling on the Hobby plan.
@@ -19,6 +20,14 @@ export async function GET(request) {
         { status: 401 }
       );
     }
+  }
+
+  // No report on weekends or company holidays. This is the authoritative check:
+  // the cron schedule itself can't express the holiday calendar.
+  const skipReason = nonWorkingDayReason();
+  if (skipReason) {
+    console.log(`Daily email skipped — ${skipReason}`);
+    return Response.json({ success: true, skipped: true, reason: skipReason });
   }
 
   try {

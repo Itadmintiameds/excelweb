@@ -28,6 +28,31 @@ function parseDate(dateStr: string): Date {
   return ts ? new Date(ts) : new Date(0);
 }
 
+// The sheet is hand-filled, so attendance arrives as "Present", "present",
+// "PRESENT ", "Week  Off"… Compare on this normalized form, never the raw value.
+function normalizeAttendance(attendance: string): string {
+  return String(attendance ?? "").trim().replace(/\s+/g, " ").toUpperCase();
+}
+
+// The sheet only ever holds Present / Absent; "Week Off" is added by the API
+// for weekend rows (app/api/excel-data/route.js). Anything else is a typo in
+// the sheet, so it renders in neutral gray rather than being counted as absent.
+const ATTENDANCE_DISPLAY: Record<string, { label: string; className: string }> = {
+  PRESENT: { label: "Present", className: "text-green-600" },
+  ABSENT: { label: "Absent", className: "text-red-600" },
+  "WEEK OFF": { label: "Week Off", className: "text-yellow-600" },
+};
+
+function attendanceDisplay(attendance: string) {
+  const raw = String(attendance ?? "").trim();
+  return (
+    ATTENDANCE_DISPLAY[normalizeAttendance(attendance)] ?? {
+      label: raw || "—",
+      className: "text-gray-500",
+    }
+  );
+}
+
 function normalizeStatus(status: string): string {
   return status
     .split("/")
@@ -64,7 +89,7 @@ export default function ReportTable({
 
     const matchesAttendance =
       attendanceFilter === "All" ||
-      report.attendance?.trim().toLowerCase() === attendanceFilter.toLowerCase();
+      normalizeAttendance(report.attendance) === normalizeAttendance(attendanceFilter);
 
     const matchesCard =
       selectedCard === "Total Reports" ||
@@ -222,14 +247,10 @@ export default function ReportTable({
                   <td className="border p-3 text-center">
                     <span
                       className={`font-semibold ${
-                        report.attendance === "Present"
-                          ? "text-green-600"
-                          : report.attendance === "Week Off"
-                          ? "text-yellow-600"
-                          : "text-red-600"
+                        attendanceDisplay(report.attendance).className
                       }`}
                     >
-                      {report.attendance}
+                      {attendanceDisplay(report.attendance).label}
                     </span>
                   </td>
                 </tr>
