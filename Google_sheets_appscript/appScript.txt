@@ -1,0 +1,151 @@
+function doGet(e) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheets = ss.getSheets();
+ 
+  const result = {};
+ 
+  sheets.forEach((sheet) => {
+    const name = sheet.getName();
+    const values = sheet.getDataRange().getValues();
+ 
+    if (values.length === 0) {
+      result[name] = [];
+      return;
+    }
+ 
+    // Normalize headers: trim edges, collapse multiple spaces to one.
+    const headers = values[0].map((h) => String(h).trim().replace(/\s+/g, " "));
+ 
+    const rows = values.slice(1).map((row) => {
+      const obj = {};
+      headers.forEach((header, i) => {
+        obj[header] = row[i] !== undefined ? row[i] : "";
+      });
+      return obj;
+    });
+ 
+    result[name] = rows;
+  });
+ 
+  return ContentService
+    .createTextOutput(JSON.stringify({
+      success: true,
+      tabs: Object.keys(result),
+      data: result
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+
+
+// function doGet(e) {
+
+//   const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+//   const sheets = ss.getSheets();
+ 
+//   const result = {};
+ 
+//   sheets.forEach((sheet) => {
+
+//     const name = sheet.getName();
+
+//     const values = sheet.getDataRange().getValues();
+ 
+//     if (values.length === 0) {
+
+//       result[name] = [];
+
+//       return;
+
+//     }
+ 
+//     const headers = values[0];
+
+//     const rows = values.slice(1).map((row) => {
+
+//       const obj = {};
+
+//       headers.forEach((header, i) => {
+
+//         obj[header] = row[i] !== undefined ? row[i] : "";
+
+//       });
+
+//       return obj;
+
+//     });
+ 
+//     result[name] = rows;
+
+//   });
+ 
+//   return ContentService
+
+//     .createTextOutput(JSON.stringify({
+
+//       success: true,
+
+//       tabs: Object.keys(result),
+
+//       data: result
+
+//     }))
+
+//     .setMimeType(ContentService.MimeType.JSON);
+
+// }
+ 
+
+
+
+// function doGet(e) {
+
+//   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+
+//   const data = sheet.getDataRange().getValues();
+
+//   const headers = data.shift();
+
+//   const result = data.map(row => {
+//     let obj = {};
+//     headers.forEach((header, index) => {
+//       obj[header] = row[index];
+//     });
+//     return obj;
+//   });
+
+//   return ContentService
+//       .createTextOutput(JSON.stringify(result))
+//       .setMimeType(ContentService.MimeType.JSON);
+// }
+
+
+
+
+// function doGet(e) {
+//   return ContentService
+//     .createTextOutput("Hello from Apps Script!")
+//     .setMimeType(ContentService.MimeType.TEXT);
+// }
+
+// function doGet(e) {
+
+//   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
+
+//   const data = sheet.getDataRange().getValues();
+
+//   const headers = data.shift();
+
+//   const result = data.map(row => {
+//     let obj = {};
+//     headers.forEach((header, index) => {
+//       obj[header] = row[index];
+//     });
+//     return obj;
+//   });
+
+//   return ContentService
+//       .createTextOutput(JSON.stringify(result))
+//       .setMimeType(ContentService.MimeType.JSON);
+// }
